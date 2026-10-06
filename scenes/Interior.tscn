@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://deputy_interior_world"]
+
+[ext_resource type="Script" path="res://scripts/world/interior.gd" id="1_interior"]
+
+[node name="Interior" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_interior")

@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://deputy_city_world"]
+
+[ext_resource type="Script" path="res://scripts/world/city.gd" id="1_city"]
+
+[node name="City" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_city")
