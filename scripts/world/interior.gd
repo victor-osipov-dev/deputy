@@ -1,35 +1,30 @@
 extends "res://scripts/world/world_base.gd"
 ## Интерьер здания из data/interiors.json: пол, мебель, NPC по постам, объекты.
-## Текстуры: Kenney Tiny Town (CC0), сетка 80px.
+## Текстуры: Kenney Roguelike Modern City (CC0), сетка 80px.
 
 const PX := 80
 
 var conf := {}
 var loc := ""
 
-# пол по зданию
-const FLOOR := {
-	"office": 1,
-	"school": 1,
-	"city_hall": 1,
-	"hospital": 1,
-	"news": 1,
-}
+# индексы тайлов modern-city (row*37+col)
+const T_WOOD := 745 # (28,20) бежевая брусчатка
+const T_WALL := 227 # (5,6) серый кирпич
 
-# мебель: тайл и высота спрайта
+# мебель: индекс тайла-«облицовки» прямоугольника-препятствия
 const FURN := {
-	"Стол": [103, 4.0],
-	"Принтерная": [102, 4.0],
-	"Диван-кровать": [106, 4.0],
-	"Класс 1": [108, 4.0],
-	"Класс 2": [108, 4.0],
-	"Кабинет директора": [103, 4.0],
-	"Приёмная": [108, 4.0],
-	"Зал заседаний": [103, 4.0],
-	"Палата": [106, 4.0],
-	"Склад лекарств": [102, 4.0],
-	"Отдел новостей": [108, 4.0],
-	"Архив": [102, 4.0],
+	"Стол": 546, # принтерный ящик
+	"Принтерная": 545, # ящик с кнопкой
+	"Диван-кровать": 849, # шкаф-тумба
+	"Класс 1": 543, # коробки-парта
+	"Класс 2": 544,
+	"Кабинет директора": 886, # шкафчик
+	"Приёмная": 548, # ящик с ручкой
+	"Зал заседаний": 805, # тёмный шкаф
+	"Палата": 886, # шкафчик
+	"Склад лекарств": 579, # шкафчик с окошком
+	"Отдел новостей": 804, # тёмная стойка
+	"Архив": 875, # тёмный хват-шкаф
 }
 
 
@@ -41,8 +36,7 @@ func build_map() -> void:
 	if conf.is_empty():
 		conf = {"name": loc, "size": [1100, 700], "floor": [0.2, 0.2, 0.2], "obstacles": [], "npc_spots": {}, "props": []}
 	var sz: Array = conf.get("size", [1100, 700])
-	var floor_i: int = FLOOR.get(loc, 13)
-	add_child(Tex.tiled(Tex.tile_big(floor_i, PX), Rect2(0, 0, sz[0], sz[1])))
+	add_child(Tex.tiled(Tex.mc_big(T_WOOD, PX), Rect2(0, 0, sz[0], sz[1])))
 	_walls(sz[0], sz[1])
 	_label(str(conf.get("name", loc)), Vector2(30, 16), 24)
 	for o in conf.get("obstacles", []):
@@ -71,10 +65,10 @@ func _load_json(path: String) -> Dictionary:
 
 
 func _walls(w: float, h: float) -> void:
-	_solid_body(Rect2(-40, -40, w + 80, 40))
-	_solid_body(Rect2(-40, h, w + 80, 40))
-	_solid_body(Rect2(-40, 0, 40, h))
-	_solid_body(Rect2(w, 0, 40, h))
+	var rects := [Rect2(-40, -40, w + 80, 40), Rect2(-40, h, w + 80, 40), Rect2(-40, 0, 40, h), Rect2(w, 0, 40, h)]
+	for r in rects:
+		add_child(Tex.tiled(Tex.mc_big(T_WALL, PX), r))
+		_solid_body(r)
 
 
 func _label(text: String, pos: Vector2, size: int) -> Label:
@@ -100,14 +94,13 @@ func _solid_body(r: Rect2) -> void:
 
 func _furniture(o: Dictionary) -> void:
 	var r := Rect2(o["x"], o["y"], o["w"], o["h"])
-	var st: Array = FURN.get(str(o.get("label", "")), [102, 4.0])
-	var s := Tex.spr(Tex.tile(st[0]), st[1])
-	s.position = r.position + r.size * 0.5 + Vector2(0, -20)
+	var idx: int = FURN.get(str(o.get("label", "")), 546)
+	var s := Tex.tiled(Tex.mc_big(idx, PX), r)
 	add_child(s)
 	_solid_body(r)
 
 
-var PROP_TILE := {"printer": 102, "paper": 102, "bed": 106, "info_board": 102, "flavor": 102}
+var PROP_TILE := {"printer": 545, "paper": 547, "bed": 849, "info_board": 616, "flavor": 543}
 
 
 func _prop(p: Dictionary) -> void:
@@ -140,8 +133,8 @@ func _prop(p: Dictionary) -> void:
 	cs2.shape = cc2
 	a2.add_child(cs2)
 	add_child(a2)
-	var s := Tex.spr(Tex.tile(PROP_TILE.get(kind, 102)), 4.0)
-	s.position = pos + Vector2(0, -20)
+	var s := Tex.spr(Tex.mc_big(PROP_TILE.get(kind, 542), PX), 1.0)
+	s.position = pos + Vector2(0, -16)
 	add_child(s)
 	_label(str(p.get("label", "")), pos + Vector2(-60, 20), 15)
 

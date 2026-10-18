@@ -1,9 +1,7 @@
 class_name Tex
 extends RefCounted
-## Текстуры Kenney (CC0, см. assets/town/License-*): тайлы города и персонажи.
+## Текстуры Kenney (CC0) + генерация пиксельных пешеходов кодом.
 
-const ATLAS := preload("res://assets/town/atlas.png")
-const CHARS := preload("res://assets/town/chars.png")
 const MC := preload("res://assets/city/mc_atlas.png")
 ## Атлас modern-city: 37 колонок, шаг 17px.
 const MC_COLS := 37
@@ -78,66 +76,125 @@ static func mc_big(i: int, px: int) -> ImageTexture:
 	return it
 
 
-## Прямоугольник из атласа персонажей (координаты листа).
-static func char_rect(r: Rect2) -> AtlasTexture:
+## Кто как выглядит: индекс варианта пешехода (16x24, генерируется кодом).
+static func char_for(npc_id: String) -> AtlasTexture:
 	var a := AtlasTexture.new()
-	a.atlas = CHARS
-	a.region = r
+	a.atlas = person_tex(person_index(npc_id))
+	a.region = Rect2(0, 0, 16, 24)
 	return a
 
 
-## Кто как выглядит: col,row в сетке листа (фигуры ~17x25).
-static func char_for(npc_id: String) -> AtlasTexture:
-	var col := 1
-	var row := 8
+## Случайный прохожий для толпы.
+static func ambient_char(i: int) -> ImageTexture:
+	var pool := [11, 1, 9, 3, 6, 10]
+	return person_tex(pool[posmod(i, pool.size())])
+
+
+# ---------- пиксельные пешеходы (генерация в рантайме) ----------
+
+static var _people: Array[ImageTexture] = []
+
+# [цвет волос, цвет пиджака/платья, цвет брюк]
+const P_PAL := [
+	[Color(0.28, 0.19, 0.12), Color(0.16, 0.2, 0.32), Color(0.1, 0.1, 0.14)], # игрок: депутат
+	[Color(0.85, 0.7, 0.4), Color(0.6, 0.62, 0.66), Color(0.25, 0.27, 0.3)], # помощник
+	[Color(0.2, 0.15, 0.1), Color(0.2, 0.45, 0.45), Color(0.2, 0.24, 0.28)], # учительница
+	[Color(0.7, 0.7, 0.7), Color(0.45, 0.2, 0.24), Color(0.15, 0.15, 0.18)], # директор
+	[Color(0.12, 0.1, 0.1), Color(0.2, 0.3, 0.22), Color(0.1, 0.1, 0.1)], # чиновник
+	[Color(0.6, 0.45, 0.3), Color(0.35, 0.25, 0.45), Color(0.15, 0.15, 0.2)], # коллега
+	[Color(0.1, 0.1, 0.12), Color(0.25, 0.35, 0.55), Color(0.12, 0.12, 0.16)], # журналист
+	[Color(0.35, 0.24, 0.14), Color(0.92, 0.92, 0.92), Color(0.35, 0.4, 0.45)], # врач
+	[Color(0.85, 0.85, 0.85), Color(0.75, 0.5, 0.55), Color(0.5, 0.35, 0.4)], # бабушка
+	[Color(0.2, 0.15, 0.1), Color(0.8, 0.45, 0.15), Color(0.2, 0.2, 0.25)], # водитель
+	[Color(0.1, 0.08, 0.08), Color(0.5, 0.35, 0.2), Color(0.3, 0.3, 0.34)], # строитель
+	[Color(0.7, 0.3, 0.15), Color(0.3, 0.5, 0.3), Color(0.2, 0.2, 0.24)], # активист
+]
+
+
+static func person_index(npc_id: String) -> int:
 	match npc_id:
 		"player":
-			col = 1
-			row = 9
+			return 0
 		"assistant":
-			col = 1
-			row = 7
+			return 1
 		"teacher_anna":
-			col = 0
-			row = 7
+			return 2
 		"principal":
-			col = 0
-			row = 8
+			return 3
 		"official":
-			col = 1
-			row = 10
+			return 4
 		"deputy_kol":
-			col = 1
-			row = 6
+			return 5
 		"journalist":
-			col = 0
-			row = 9
+			return 6
 		"doctor_elena":
-			col = 0
-			row = 11
+			return 7
 		"patient_granny":
-			col = 1
-			row = 5
+			return 8
 		"driver_sergey":
-			col = 0
-			row = 6
+			return 9
 		"builder":
-			col = 0
-			row = 10
+			return 10
 		"activist":
-			col = 0
-			row = 5
-	var y := row * 17 - 4
-	if y < 0.0:
-		y = 0.0
-	return char_rect(Rect2(col * 17, y, 17, 25))
+			return 11
+		_:
+			return 4
 
 
-## Случайный прохожий для толпы.
-static func ambient_char(i: int) -> AtlasTexture:
-	var pool := [Vector2(1, 8), Vector2(0, 2), Vector2(1, 2), Vector2(0, 1), Vector2(1, 1), Vector2(0, 8)]
-	var c: Vector2 = pool[i % pool.size()]
-	return char_rect(Rect2(c.x * 17, c.y * 17 - 4, 17, 25))
+## Спрайт-текстура пешехода по индексу.
+static func person_tex(i: int) -> ImageTexture:
+	if _people.is_empty():
+		_build_people()
+	return _people[abs(i) % _people.size()]
+
+
+static func _build_people() -> void:
+	for v in P_PAL.size():
+		var img := Image.create(16, 24, false, Image.FORMAT_RGBA8)
+		_one_person(img, P_PAL[v])
+		_people.append(ImageTexture.create_from_image(img))
+
+
+static func _one_person(img: Image, p: Array) -> void:
+	var hair: Color = p[0]
+	var suit: Color = p[1]
+	var pants: Color = p[2]
+	var skin := Color(0.92, 0.78, 0.64)
+	var shirt := Color(1, 1, 1)
+	var dark := Color(0.13, 0.12, 0.12)
+	var eye := Color(0.08, 0.07, 0.07)
+	# волосы
+	for y in 3:
+		for x in range(4, 12):
+			img.set_pixel(x, y, hair)
+	# лицо
+	for y in range(3, 8):
+		for x in range(4, 12):
+			img.set_pixel(x, y, skin)
+	for y in range(3, 5):
+		img.set_pixel(3, y, hair)
+		img.set_pixel(12, y, hair)
+	img.set_pixel(6, 5, eye)
+	img.set_pixel(9, 5, eye)
+	# пиджак
+	for y in range(8, 17):
+		for x in range(3, 13):
+			img.set_pixel(x, y, suit)
+	for x in range(7, 9):
+		img.set_pixel(x, 8, shirt)
+	img.set_pixel(3, 16, skin)
+	img.set_pixel(12, 16, skin)
+	# штанины
+	for y in range(17, 22):
+		for x in range(4, 7):
+			img.set_pixel(x, y, pants)
+		for x in range(9, 12):
+			img.set_pixel(x, y, pants)
+	# обувь
+	for x in range(3, 7):
+		img.set_pixel(x, 22, dark)
+	for x in range(9, 13):
+		img.set_pixel(x, 22, dark)
 
 
 ## Заливка прямоугольника тайлом (земля, дороги, стены, полы).

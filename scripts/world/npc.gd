@@ -16,8 +16,8 @@ static func make_id(npc_id: String, emoji: String, dname: String) -> WorldNPC:
 	circle.radius = 16.0
 	shape.shape = circle
 	n.add_child(shape)
-	var face := Tex.spr(Tex.char_for(npc_id), 2.5)
-	face.position = Vector2(0, -32)
+	var face := Tex.spr(Tex.char_for(npc_id), 3.0)
+	face.position = Vector2(0, -34)
 	n.add_child(face)
 	var tag := Label.new()
 	tag.text = dname
@@ -26,7 +26,7 @@ static func make_id(npc_id: String, emoji: String, dname: String) -> WorldNPC:
 	tag.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
 	tag.add_theme_constant_override("shadow_offset_x", 1)
 	tag.add_theme_constant_override("shadow_offset_y", 1)
-	tag.position = Vector2(-40, -76)
+	tag.position = Vector2(-40, -84)
 	tag.custom_minimum_size = Vector2(90, 0)
 	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	n.add_child(tag)
@@ -48,8 +48,8 @@ static func make_ambient(emoji: String, line: String) -> WorldNPC:
 	n.ambient_line = line
 	n.name = "Ambient"
 	var idx: int = abs(line.hash()) % 6
-	var face := Tex.spr(Tex.ambient_char(idx), 2.5)
-	face.position = Vector2(0, -30)
+	var face := Tex.spr(Tex.ambient_char(idx), 3.0)
+	face.position = Vector2(0, -32)
 	n.add_child(face)
 	var tag := Label.new()
 	tag.text = line
@@ -58,7 +58,7 @@ static func make_ambient(emoji: String, line: String) -> WorldNPC:
 	tag.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
 	tag.add_theme_constant_override("shadow_offset_x", 1)
 	tag.add_theme_constant_override("shadow_offset_y", 1)
-	tag.position = Vector2(-110, -68)
+	tag.position = Vector2(-110, -74)
 	tag.custom_minimum_size = Vector2(230, 0)
 	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tag.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

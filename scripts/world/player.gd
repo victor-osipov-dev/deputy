@@ -23,7 +23,7 @@ func _ready() -> void:
 	shade.polygon = PackedVector2Array([Vector2(-14, 10), Vector2(14, 10), Vector2(10, 16), Vector2(-10, 16)])
 	shade.color = Color(0, 0, 0, 0.35)
 	add_child(shade)
-	body = Tex.spr(Tex.char_for("player"), 2.5)
+	body = Tex.spr(Tex.char_for("player"), 3.0)
 	body.position = Vector2(0, -32)
 	add_child(body)
 	var sensor := Area2D.new()
@@ -58,9 +58,9 @@ func _physics_process(_delta: float) -> void:
 	# лёгкое покачивание при ходьбе
 	if velocity.length() > 10.0:
 		step_phase += _delta * 10.0
-		body.position.y = -52.0 + abs(sin(step_phase)) * -4.0
+		body.position.y = -34.0 + abs(sin(step_phase)) * -4.0
 	else:
-		body.position.y = -52.0
+		body.position.y = -34.0
 
 
 func is_moving() -> bool:
