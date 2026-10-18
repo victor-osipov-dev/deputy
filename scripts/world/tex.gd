@@ -63,6 +63,21 @@ static func mc(col: int, row: int, w: int = 1, h: int = 1) -> AtlasTexture:
 	return a
 
 
+## Один тайл modern-city по индексу (row*37+col), увеличенный до px пикселей.
+static func mc_big(i: int, px: int) -> ImageTexture:
+	var k := "mcb%dx%d" % [i, px]
+	if _cache.has(k):
+		return _cache[k] as ImageTexture
+	var img := MC.get_image()
+	var col := i % MC_COLS
+	var row := i / MC_COLS
+	var t := img.get_region(Rect2(col * MC_PITCH, row * MC_PITCH, 16, 16))
+	t.resize(px, px, Image.INTERPOLATE_NEAREST)
+	var it := ImageTexture.create_from_image(t)
+	_cache[k] = it
+	return it
+
+
 ## Прямоугольник из атласа персонажей (координаты листа).
 static func char_rect(r: Rect2) -> AtlasTexture:
 	var a := AtlasTexture.new()
