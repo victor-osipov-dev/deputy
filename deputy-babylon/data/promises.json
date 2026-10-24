@@ -1,0 +1,14 @@
+{
+  "templates": [
+    {"id": "p_school_teachers", "title": "Нанять 5 учителей", "desc": "Доплаты и найм. Нужна поддержка Кольцова на заседании дня 5.", "topic": "school", "audience": ["parents", "teachers", "pupils"], "cost": 1200, "time_cost": 90, "deadline": 7, "needs_kol": true, "importance": 3, "visibility": 3},
+    {"id": "p_school_repair", "title": "Отремонтировать классы", "desc": "Текущие крыши двух классов.", "topic": "school", "audience": ["parents", "teachers"], "cost": 800, "time_cost": 60, "deadline": 7, "needs_kol": false, "importance": 2, "visibility": 2},
+    {"id": "p_transport_buses", "title": "Починить 3 автобуса", "desc": "Запчасти и ремонт депо.", "topic": "transport", "audience": ["drivers", "residents_outskirts", "pensioners"], "cost": 900, "time_cost": 60, "deadline": 6, "needs_kol": false, "importance": 3, "visibility": 3},
+    {"id": "p_transport_route", "title": "Новый маршрут в окраину", "desc": "Совместный проект с Кольцовым.", "topic": "transport", "audience": ["residents_outskirts", "drivers"], "cost": 600, "time_cost": 60, "deadline": 7, "needs_kol": true, "importance": 2, "visibility": 2},
+    {"id": "p_park", "title": "Парк в северном районе", "desc": "Деревья, лавочки, детская площадка. Водители против.", "topic": "park", "audience": ["families", "children", "pensioners"], "cost": 1500, "time_cost": 90, "deadline": 7, "needs_kol": false, "importance": 3, "visibility": 3},
+    {"id": "p_hospital_meds", "title": "Лекарства для пункта", "desc": "Закупка на месяц. Быстро и дёшево.", "topic": "hospital", "audience": ["pensioners", "families", "doctors"], "cost": 700, "time_cost": 45, "deadline": 5, "needs_kol": false, "importance": 2, "visibility": 2},
+    {"id": "p_hospital_shift", "title": "Вторая смена врачей", "desc": "Доп. часы приёма.", "topic": "hospital", "audience": ["pensioners", "families"], "cost": 1000, "time_cost": 60, "deadline": 7, "needs_kol": false, "importance": 2, "visibility": 2},
+    {"id": "p_roads", "title": "Ремонт главной улицы", "desc": "Ямочный ремонт. Дешевле до дня 5.", "topic": "roads", "audience": ["drivers", "residents"], "cost": 1100, "time_cost": 60, "deadline": 6, "needs_kol": false, "importance": 2, "visibility": 2},
+    {"id": "p_roads_light", "title": "Освещение перехода у школы", "desc": "Фонари и зебра. Дёшево, аудитория пересекается со школой.", "topic": "roads", "audience": ["parents", "pupils", "teachers"], "cost": 400, "time_cost": 30, "deadline": 7, "needs_kol": false, "importance": 1, "visibility": 2},
+    {"id": "p_meeting", "title": "Встреча с жителями", "desc": "Открытая встреча + пресса. Растит внимание к твоим темам.", "topic": "park", "audience": ["residents", "families"], "cost": 100, "time_cost": 90, "deadline": 7, "needs_kol": false, "importance": 1, "visibility": 3}
+  ]
+}

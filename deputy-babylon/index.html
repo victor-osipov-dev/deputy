@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Депутат: 7 дней до выборов — Babylon.js</title>
+<link rel="stylesheet" href="style.css">
+<script src="assets/vendor/babylon.js"></script>
+</head>
+<body>
+<div id="app">
+  <canvas id="scene" touch-action="none"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="hud-day">День 1/7 • 08:00</div>
+    <div id="hud-obj">➤ Найди свой офис</div>
+    <div id="hud-money">€3500 • 📄0</div>
+    <button id="btn-phone" class="hud-btn" title="Телефон (Q)">📱</button>
+    <button id="btn-menu" class="hud-btn" title="Меню (Esc)">☰</button>
+  </div>
+
+  <!-- Тосты -->
+  <div id="toasts"></div>
+
+  <!-- Подсказка взаимодействия -->
+  <button id="prompt" class="hidden"></button>
+
+  <!-- Виртуальный джойстик (сенсорный) -->
+  <div id="stick" class="hidden ui-no-touch">
+    <div id="stick-knob"></div>
+  </div>
+
+  <!-- Модальные окна -->
+  <div id="modal-root"></div>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

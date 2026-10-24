@@ -1,0 +1,16 @@
+{
+  "travel": {
+    "office": {"school": [20, 20], "city_hall": [10, 10], "district": [30, 30], "news": [15, 15]},
+    "school": {"office": [20, 20], "city_hall": [25, 25], "district": [35, 35], "news": [20, 20]},
+    "city_hall": {"office": [10, 10], "school": [25, 25], "district": [30, 30], "news": [10, 10]},
+    "district": {"office": [30, 30], "school": [35, 35], "city_hall": [30, 30], "news": [25, 25]},
+    "news": {"office": [15, 15], "school": [20, 20], "city_hall": [10, 10], "district": [25, 25]}
+  },
+  "costs": {
+    "talk": 20,
+    "study_doc": 10,
+    "print_100": [30, 150],
+    "hand_out": [60, 0],
+    "mass_drop": [20, 0]
+  }
+}

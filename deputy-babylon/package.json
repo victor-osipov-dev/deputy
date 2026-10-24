@@ -1,0 +1,10 @@
+{
+  "name": "deputy-babylon",
+  "version": "1.0.0",
+  "description": "Web-порт игры «Депутат: 7 дней до выборов» на Babylon.js",
+  "type": "module",
+  "scripts": {
+    "start": "npx http-server -p 8137 -c-1 .",
+    "test": "node tests/smoke.js"
+  }
+}

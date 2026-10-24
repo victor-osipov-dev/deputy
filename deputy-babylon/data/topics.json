@@ -1,0 +1,9 @@
+{
+  "topics": [
+    {"id": "school", "name": "Школа", "icon": "🏫", "desc": "Нехватка учителей, переполненные классы.", "base": 30, "decisive_day": 4, "home": "school"},
+    {"id": "transport", "name": "Транспорт", "icon": "🚌", "desc": "Сломанные автобусы, опоздания.", "base": 25, "decisive_day": 4, "home": "district"},
+    {"id": "hospital", "name": "Больница", "icon": "🏥", "desc": "Нехватка лекарств в районном пункте.", "base": 20, "decisive_day": 2, "home": "hospital"},
+    {"id": "roads", "name": "Дороги", "icon": "🛣", "desc": "Ямы, темнота, рост цен на ремонт.", "base": 15, "decisive_day": 5, "home": "city"},
+    {"id": "park", "name": "Парк", "icon": "🌳", "desc": "Пустырь: парк для семей или парковка?", "base": 10, "decisive_day": 6, "home": "district"}
+  ]
+}

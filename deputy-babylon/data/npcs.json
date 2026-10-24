@@ -1,0 +1,26 @@
+{
+  "npcs": [
+    {"id": "assistant", "name": "Мила", "profession": "Помощница", "emoji": "🧑‍💼", "location": "office", "from": 8, "to": 20, "reliability": 1.0, "knowledge": ["assistant_brief"], "dialogue": "dlg_assistant", "promises": [],
+     "posts": [{"loc": "office", "from": 8, "to": 20}]},
+    {"id": "teacher_anna", "name": "Анна", "profession": "Учитель", "emoji": "👩‍🏫", "location": "school", "from": 8, "to": 17, "reliability": 0.9, "knowledge": ["school_staff_shortage", "teacher_pay"], "dialogue": "dlg_anna", "promises": ["p_school_teachers"],
+     "posts": [{"loc": "school", "from": 8, "to": 16}, {"loc": "district", "from": 17, "to": 20, "cx": 2160, "cy": 1040}]},
+    {"id": "principal", "name": "Виктор Палыч", "profession": "Директор школы", "emoji": "👨‍🏫", "location": "school", "from": 9, "to": 18, "reliability": 0.95, "knowledge": ["school_budget_cut"], "dialogue": "dlg_principal", "promises": ["p_school_repair", "p_roads_light"],
+     "posts": [{"loc": "school", "from": 9, "to": 18}]},
+    {"id": "official", "name": "Громов", "profession": "Чиновник мэрии", "emoji": "🤵", "location": "city_hall", "from": 9, "to": 18, "reliability": 0.9, "knowledge": ["council_meeting", "transport_cuts"], "dialogue": "dlg_official", "promises": [],
+     "posts": [{"loc": "city_hall", "from": 9, "to": 18}]},
+    {"id": "deputy_kol", "name": "Кольцов", "profession": "Депутат-соперник", "emoji": "🧔", "location": "city_hall", "from": 10, "to": 19, "reliability": 0.8, "knowledge": ["deputy_deal"], "dialogue": "dlg_kol", "promises": ["p_transport_route", "p_roads"],
+     "posts": [{"loc": "city_hall", "from": 10, "to": 19}]},
+    {"id": "journalist", "name": "Ира", "profession": "Журналистка", "emoji": "📝", "location": "news", "from": 9, "to": 20, "reliability": 0.9, "knowledge": ["media_plan"], "dialogue": "dlg_journalist", "promises": ["p_meeting"],
+     "posts": [{"loc": "city", "from": 13, "to": 20, "day_min": 4, "cx": 1150, "cy": 520}, {"loc": "news", "from": 9, "to": 20}]},
+    {"id": "doctor_elena", "name": "Елена", "profession": "Врач пункта", "emoji": "👩‍⚕️", "location": "hospital", "from": 8, "to": 16, "reliability": 0.85, "knowledge": ["hospital_meds"], "dialogue": "dlg_doctor", "promises": ["p_hospital_meds", "p_hospital_shift"],
+     "posts": [{"loc": "hospital", "from": 8, "to": 16}]},
+    {"id": "patient_granny", "name": "Баба Валя", "profession": "Пациентка", "emoji": "👵", "location": "hospital", "from": 9, "to": 15, "reliability": 0.7, "knowledge": ["hospital_queues"], "dialogue": "dlg_patient", "promises": [],
+     "posts": [{"loc": "hospital", "from": 9, "to": 15}]},
+    {"id": "driver_sergey", "name": "Сергей", "profession": "Водитель автобуса", "emoji": "🧑‍✈️", "location": "district", "from": 8, "to": 18, "reliability": 0.9, "knowledge": ["transport_buses"], "dialogue": "dlg_driver", "promises": ["p_transport_buses"],
+     "posts": [{"loc": "district", "from": 8, "to": 12}, {"loc": "district", "from": 12, "to": 18, "cx": 2260, "cy": 700}]},
+    {"id": "builder", "name": "Петрович", "profession": "Строитель", "emoji": "👷", "location": "district", "from": 9, "to": 18, "reliability": 0.7, "knowledge": ["roads_prices", "park_parking"], "dialogue": "dlg_builder", "promises": ["p_roads"],
+     "posts": [{"loc": "district", "from": 9, "to": 18}]},
+    {"id": "activist", "name": "Зоя + сосед", "profession": "Жители района", "emoji": "🧓", "location": "district", "from": 10, "to": 20, "reliability": 0.8, "knowledge": ["park_conflict", "roads_dark"], "dialogue": "dlg_residents", "promises": ["p_park", "p_roads_light"],
+     "posts": [{"loc": "district", "from": 10, "to": 20}]}
+  ]
+}
