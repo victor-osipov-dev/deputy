@@ -120,6 +120,7 @@ export class World {
     this.ylist = [];
     this.groundFns = [];
     this.buildingRects = [];
+    this.roadRects = [];
     this.rngState = 12345;
 
     // земля: тротуар везде
@@ -128,9 +129,32 @@ export class World {
     const pk = this.city.park ?? {};
     this.groundFns.push((ctx) => Tex.tiled(ctx, T_GRASS, pk.x ?? 1650, pk.y ?? 120, pk.w ?? 600, pk.h ?? 260));
     this._walls(W, H);
-    for (const r of this.city.roads ?? []) this._road(r[0], r[1], r[2], r[3]);
-    const pl = this.city.plaza ?? [1080, 640, 260, 100];
+    // площадь: до дорог, и не на дороге (сдвигаем влево от вертикальной)
+    const pl = (this.city.plaza ?? [1080, 640, 260, 100]).slice();
+    const rv = (this.city.roads ?? []).find((r) => r[2] < r[3]); // вертикальная дорога
+    if (rv && pl[0] + pl[2] > rv[0] - 20) pl[0] = rv[0] - pl[2] - 20;
     this.groundFns.push((ctx) => Tex.tiled(ctx, T_TAN, pl[0], pl[1], pl[2], pl[3]));
+    for (const r of this.city.roads ?? []) this._road(r[0], r[1], r[2], r[3]);
+    // перекрёстки: чистый асфальт поверх разметки/тротуаров
+    // зона дороги с её тротуарами (PX по бокам) — чтобы перекрёсток был сплошным
+    const full = (r) => (r[2] >= r[3] ? { x: r[0], y: r[1] - PX, w: r[2], h: r[3] + PX * 2 } : { x: r[0] - PX, y: r[1], w: r[2] + PX * 2, h: r[3] });
+    const rr = this.roadRects.map((r, i) => full((this.city.roads ?? [])[i]));
+    for (let i = 0; i < rr.length; i += 1) {
+      for (let j = i + 1; j < rr.length; j += 1) {
+        const a = rr[i], b = rr[j];
+        const x1 = Math.max(a.x, b.x);
+        const y1 = Math.max(a.y, b.y);
+        const x2 = Math.min(a.x + a.w, b.x + b.w);
+        const y2 = Math.min(a.y + a.h, b.y + b.h);
+        if (x2 > x1 && y2 > y1) {
+          const px1 = x1, py1 = y1, pw = x2 - x1, ph = y2 - y1;
+          this.groundFns.push((ctx) => Tex.tiled(ctx, T_ASPH, px1, py1, pw, ph));
+        }
+      }
+    }
+    // зебра — через горизонтальную дорогу по центру вертикальной
+    const cxw = rv ? rv[0] + rv[2] * 0.5 : pl[0] + pl[2] * 0.5;
+    this._crosswalk(cxw, 740, cxw, 850);
     this._label("⛲ ПЛОЩАДЬ", pl[0] + 30, pl[1] + 10, 20);
     this._bench(pl[0] + 40, pl[1] + 40);
     this._bench(pl[0] + pl[2] - 230, pl[1] + 40);
@@ -292,6 +316,7 @@ export class World {
 
   // Дорога: асфальт + жёлтая середина + тротуары по бокам.
   _road(x, y, w, h) {
+    this.roadRects.push({ x, y, w, h });
     this.groundFns.push((ctx) => Tex.tiled(ctx, T_ASPH, x, y, w, h));
     if (w >= h) {
       const mid = y + h * 0.5 - PX * 0.5;
@@ -333,10 +358,15 @@ export class World {
   }
 
   _house(x, y, w, h) {
+    // дома не стоят на дорогах (в data есть точка на дороге)
+    for (const r of this.roadRects) {
+      if (x + w > r.x - 10 && x < r.x + r.w + 10 && y + h > r.y - 10 && y < r.y + r.h + 10) return;
+    }
     this.buildingRects.push({ x, y, w, h });
-    this.ylist.push({ y, draw: (ctx) => Tex.tiled(ctx, 227, x, y, w, h) });
+    // жилой вид: бежевый кирпич + красная крыша
+    this.ylist.push({ y, draw: (ctx) => Tex.tiled(ctx, 231, x, y, w, h) });
     this._solid(x, y, w, h);
-    this.ylist.push({ y: y - 30, draw: (ctx) => Tex.tiled(ctx, 43, x, y - 30, w, 48) });
+    this.ylist.push({ y: y - 30, draw: (ctx) => Tex.tiled(ctx, 39, x, y - 30, w, 48) });
   }
 
   _door(px, py, loc, label, dcol) {
@@ -345,14 +375,17 @@ export class World {
   }
 
   _tree(x, y) {
-    // деревья не растут внутри зданий (в data есть точка внутри больницы)
+    // деревья не растут внутри зданий и на дорогах (в data есть такие точки)
     for (const b of this.buildingRects) {
       if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return;
     }
+    for (const r of this.roadRects) {
+      if (x >= r.x - 20 && x <= r.x + r.w + 20 && y >= r.y - 20 && y <= r.y + r.h + 20) return;
+    }
     const kinds = [31, 32, 33, 34, 35, 36];
     const col = kinds[Math.floor(this.rand() * kinds.length)];
-    // 1x1: цельное дерево (крона+ствол), основание у земли
-    this.ylist.push({ y: y - 40, draw: (ctx) => Tex.drawMosaic(ctx, col, 12, 1, 1, x, y - 40, 5.0) });
+    // полное дерево: 2 тайла (верх r10 + низ r11), основание у земли
+    this.ylist.push({ y: y - 80, draw: (ctx) => Tex.drawMosaic(ctx, col, 10, 1, 2, x, y - 80, 5.0) });
   }
 
   _lampsRow(x, y, n, step) {
@@ -369,7 +402,8 @@ export class World {
   }
 
   _bench(x, y) {
-    this.ylist.push({ y, draw: (ctx) => Tex.drawMosaic(ctx, 35, 23, 2, 1, x, y, 4.0) });
+    // деревянная скамья/стол (рейки (35,23) выглядели как странные металлические балки)
+    this.ylist.push({ y, draw: (ctx) => Tex.drawMosaic(ctx, 18, 15, 1, 1, x, y, 4.0) });
   }
 
   _propMc(col, row, x, y, sc) {

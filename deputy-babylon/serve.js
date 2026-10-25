@@ -13,7 +13,7 @@ createServer(async (req, res) => {
   try {
     const file = normalize(join(root, p));
     const data = await readFile(file);
-    res.writeHead(200, { "Content-Type": types[extname(file)] ?? "application/octet-stream" });
+    res.writeHead(200, { "Content-Type": types[extname(file)] ?? "application/octet-stream", "Cache-Control": "no-store" });
     res.end(data);
   } catch {
     res.writeHead(404); res.end("no");
