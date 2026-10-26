@@ -61,6 +61,9 @@ export class World {
     this.keys = new Set();
 
     this.view = { w: 1280, h: 720 };
+    this.layout = null;      // раскладка города (редактируется редактором)
+    this.editorActive = false;
+    this.editor = null;      // Editor (src/editor.js)
 
     // Рендер в 2D-контекст Babylon DynamicTexture создаётся в main.js и передаётся вызовом render(ctx).
   }
@@ -77,7 +80,8 @@ export class World {
     window.addEventListener("keydown", (e) => {
       if (e.repeat) return;
       const m = MAP[e.code];
-      if (m) { this.keys.add(m); e.preventDefault(); return; }
+      if (m) { this.keys.add(m); if (this.editorActive) e.preventDefault(); return; }
+      if (this.editorActive) return; // в редакторе клавиши — редактору
       if (e.code === "KeyE" || e.code === "Space") {
         this.doInteract(this.target);
         e.preventDefault();
@@ -108,7 +112,45 @@ export class World {
 
   // ================= сборка карт =================
 
-  buildCity() {
+  // Раскладка города: всё, что можно двигать в редакторе, живёт здесь.
+  // По умолчанию строится из data/city.json + исторических констант.
+  defaultLayout() {
+    const c = this.city;
+    const roads = (c.roads ?? [[0, 740, 2400, 110], [1140, 0, 110, 1600]]).map((r) => r.slice());
+    const rv = roads.find((r) => r[2] < r[3]); // вертикальная дорога
+    const pl = (c.plaza ?? [1080, 640, 260, 100]).slice();
+    if (rv && pl[0] + pl[2] > rv[0] - 20) pl[0] = rv[0] - pl[2] - 20;
+    const pk = c.park ?? {};
+    const dd = c.district ?? {};
+    const cw = rv ? rv[0] + rv[2] * 0.5 : pl[0] + pl[2] * 0.5;
+    return {
+      roads,
+      plaza: pl,
+      park: [pk.x ?? 1650, pk.y ?? 120, pk.w ?? 600, pk.h ?? 260],
+      district: [dd.x ?? 1900, dd.y ?? 560, dd.w ?? 460, dd.h ?? 560],
+      crosswalk: [cw, 740],
+      buildings: (c.buildings ?? []).map((b) => ({
+        id: String(b.id), x: b.x, y: b.y, w: b.w, h: b.h,
+        door: (b.door ?? [b.x + b.w * 0.5, b.y + b.h]).slice(),
+      })),
+      houses: (c.houses ?? []).map((h) => h.slice()),
+      trees: (c.trees ?? []).map((t) => t.slice()),
+      benches: [[pl[0] + 40, pl[1] + 40], [pl[0] + pl[2] - 230, pl[1] + 40], [1750, 300]],
+      // фонари — по одному, чтобы двигать каждый отдельно
+      lamps: [
+        [100, 720], [560, 720], [1020, 720], [1480, 720], [1940, 720],
+        [1120, 100], [1460, 100], [1800, 100], [2140, 100],
+      ],
+      cars: [[700, 795, 0], [1500, 795, 2], [1185, 1150, 1]],
+      props: [[30, 14, 1450, 700, 4], [25, 14, 2290, 660, 4], [29, 14, 2150, 1010, 4]],
+      dropboxes: [[2100, 950], [1340, 470]],
+      bus_stops: (c.bus_stops ?? []).map((s) => ({ id: String(s.id), x: s.x, y: s.y })),
+      npc_spots: { ...(c.npc_spots ?? {}) },
+      ambient: c.ambient ?? [],
+    };
+  }
+
+  buildCity(layout) {
     this.mode = "city";
     this.mapId = "city";
     this.city = this.game.D.city ?? {};
@@ -122,23 +164,23 @@ export class World {
     this.buildingRects = [];
     this.roadRects = [];
     this.rngState = 12345;
+    this.layout = layout ?? this.layout ?? this.game.D.city_layout ?? this.defaultLayout();
+    this.layout = this.migrateLayout(this.layout);
+    const L = this.layout;
 
     // земля: тротуар везде
     this.groundFns.push((ctx) => Tex.tiled(ctx, T_SIDE, 0, 0, W, H));
     // парк (зелёный)
-    const pk = this.city.park ?? {};
-    this.groundFns.push((ctx) => Tex.tiled(ctx, T_GRASS, pk.x ?? 1650, pk.y ?? 120, pk.w ?? 600, pk.h ?? 260));
+    const pk = L.park;
+    this.groundFns.push((ctx) => Tex.tiled(ctx, T_GRASS, pk[0], pk[1], pk[2], pk[3]));
     this._walls(W, H);
-    // площадь: до дорог, и не на дороге (сдвигаем влево от вертикальной)
-    const pl = (this.city.plaza ?? [1080, 640, 260, 100]).slice();
-    const rv = (this.city.roads ?? []).find((r) => r[2] < r[3]); // вертикальная дорога
-    if (rv && pl[0] + pl[2] > rv[0] - 20) pl[0] = rv[0] - pl[2] - 20;
+    // площадь (лежит до дорог, чтобы дорога была поверх, если что)
+    const pl = L.plaza;
     this.groundFns.push((ctx) => Tex.tiled(ctx, T_TAN, pl[0], pl[1], pl[2], pl[3]));
-    for (const r of this.city.roads ?? []) this._road(r[0], r[1], r[2], r[3]);
+    for (const r of L.roads) this._road(r[0], r[1], r[2], r[3]);
     // перекрёстки: чистый асфальт поверх разметки/тротуаров
-    // зона дороги с её тротуарами (PX по бокам) — чтобы перекрёсток был сплошным
     const full = (r) => (r[2] >= r[3] ? { x: r[0], y: r[1] - PX, w: r[2], h: r[3] + PX * 2 } : { x: r[0] - PX, y: r[1], w: r[2] + PX * 2, h: r[3] });
-    const rr = this.roadRects.map((r, i) => full((this.city.roads ?? [])[i]));
+    const rr = L.roads.map((r) => full(r));
     for (let i = 0; i < rr.length; i += 1) {
       for (let j = i + 1; j < rr.length; j += 1) {
         const a = rr[i], b = rr[j];
@@ -152,32 +194,28 @@ export class World {
         }
       }
     }
-    // зебра — через горизонтальную дорогу по центру вертикальной
-    const cxw = rv ? rv[0] + rv[2] * 0.5 : pl[0] + pl[2] * 0.5;
-    this._crosswalk(cxw, 740, cxw, 850);
+    // зебра через дорогу
+    this._crosswalk(L.crosswalk[0], L.crosswalk[1], L.crosswalk[0], L.crosswalk[1] + 110);
     this._label("⛲ ПЛОЩАДЬ", pl[0] + 30, pl[1] + 10, 20);
-    this._bench(pl[0] + 40, pl[1] + 40);
-    this._bench(pl[0] + pl[2] - 230, pl[1] + 40);
     const dd = this.city.district ?? {};
-    this.districtRect = { x: dd.x ?? 1900, y: dd.y ?? 560, w: dd.w ?? 460, h: dd.h ?? 560 };
+    this.districtRect = { x: L.district[0], y: L.district[1], w: L.district[2], h: L.district[3] };
     this._label("🏠 " + String(dd.name ?? "Район"), this.districtRect.x + 120, this.districtRect.y + 10, 20);
-    this._label("🌳 " + String(pk.label ?? "ПУСТЫРЬ"), (pk.x ?? 1650) + 200, (pk.y ?? 120) + 10, 20);
-    this._bench(1750, 300);
-    for (const b of this.city.buildings ?? []) this._building(b);
-    for (const sh of this.city.houses ?? []) this._house(sh[0], sh[1], sh[2], sh[3]);
-    for (const t of this.city.trees ?? []) this._tree(t[0], t[1]);
-    for (const s of this.city.bus_stops ?? []) this._busStop(s);
-    this._dropbox(2100, 950);
-    this._dropbox(1340, 470);
-    this._lampsRow(100, 720, 5, 460.0);
-    this._lampsRow(1120, 100, 4, 340.0);
-    this._car(700, 795, 0);
-    this._car(1500, 795, 2);
-    this._car(1185, 1150, 1);
-    this._propMc(30, 14, 1450, 700, 4.0); // ящик
-    this._propMc(35, 24, 1900, 860, 4.0); // барьер
-    this._propMc(25, 14, 2290, 660, 4.0); // коробка у депо
-    this._propMc(29, 14, 2150, 1010, 4.0); // коробка
+    this._label("🌳 " + String(pk.label ?? "ПУСТЫРЬ"), pk[0] + 200, pk[1] + 10, 20);
+    for (const b of L.benches) this._bench(b[0], b[1]);
+    for (const lb of L.buildings) {
+      const meta = (this.city.buildings ?? []).find((x) => String(x.id) === String(lb.id)) ?? {};
+      this._building({ ...meta, ...lb });
+    }
+    for (const sh of L.houses) this._house(sh[0], sh[1], sh[2], sh[3]);
+    for (const t of L.trees) this._tree(t[0], t[1]);
+    for (const s of L.bus_stops) {
+      const meta = (this.city.bus_stops ?? []).find((x) => String(x.id) === String(s.id)) ?? {};
+      this._busStop({ ...meta, ...s });
+    }
+    for (const d of L.dropboxes) this._dropbox(d[0], d[1]);
+    for (const l of L.lamps) this._lamp(l[0], l[1]);
+    for (const c of L.cars) this._car(c[0], c[1], c[2]);
+    for (const p of L.props) this._propMc(p[0], p[1], p[2], p[3], p[4]);
     this._spawnNpcsCity();
     this._spawnAmbient();
 
@@ -186,6 +224,145 @@ export class World {
     for (const n of notes) this.ui.toast(n);
     this.ui.drainUnlocksToasts();
     this.game.spawnOverride = null;
+  }
+
+  // Совместимость со старыми сохранёнными раскладками (миграция НА МЕСТЕ,
+  // нельзя пересоздавать массивы: редактор держит ссылки на них при перетаскивании):
+  // - lamps раньше были рядами [x, y, n, step] → разворачиваем в отдельные фонари;
+  // - props содержали фрагмент оранжевой машины (35,24), он не нужен.
+  migrateLayout(L) {
+    if (!L) return L;
+    const hasRows = (L.lamps ?? []).some((l) => Array.isArray(l) && l.length >= 4);
+    if (hasRows) {
+      const lamps = [];
+      for (const l of L.lamps ?? []) {
+        if (!Array.isArray(l)) continue;
+        if (l.length >= 4) {
+          const [x, y, n, step] = l;
+          for (let i = 0; i < n; i += 1) lamps.push([x + i * step, y]);
+        } else if (l.length >= 2) {
+          lamps.push([l[0], l[1]]);
+        }
+      }
+      L.lamps = lamps;
+    }
+    if (Array.isArray(L.props)) {
+      for (let i = L.props.length - 1; i >= 0; i -= 1) {
+        const p = L.props[i];
+        if (Number(p[0]) === 35 && Number(p[1]) === 24) L.props.splice(i, 1);
+      }
+    }
+    return L;
+  }
+
+  // Пересобрать город (после правок редактора), сохранив камеру/игрока.
+  rebuildCity() {
+    const cam = { ...this.cam };
+    const p = { x: this.player.x, y: this.player.y };
+    this.buildCity(this.layout);
+    this.cam = cam;
+    this.player.x = p.x;
+    this.player.y = p.y;
+  }
+
+  // Список редактируемых объектов: {kind, label, get(), set(x,y), bounds()}.
+  editorItems() {
+    const L = this.layout;
+    if (!L) return [];
+    const out = [];
+    const rectItem = (kind, label, arr) => {
+      // arr: [x, y, ...] — двигаем первые два числа
+      out.push({
+        kind, label,
+        get: () => [arr[0], arr[1]],
+        set: (x, y) => { arr[0] = x; arr[1] = y; },
+        bounds: () => ({ x: arr[0] - 40, y: arr[1] - 60, w: 80, h: 90 }),
+      });
+    };
+    for (const b of L.buildings) {
+      const meta = (this.city.buildings ?? []).find((x) => String(x.id) === String(b.id)) ?? {};
+      out.push({
+        kind: "building",
+        label: `${meta.icon ?? "🏢"} ${meta.name ?? b.id}`,
+        get: () => [b.x, b.y],
+        set: (x, y) => {
+          const dx = x - b.x, dy = y - b.y;
+          b.x = x; b.y = y;
+          b.door[0] += dx; b.door[1] += dy;
+        },
+        bounds: () => ({ x: b.x, y: b.y, w: b.w, h: b.h }),
+      });
+    }
+    L.houses.forEach((h, i) => rectItem("house", `🏠 Дом ${i + 1}`, h));
+    L.trees.forEach((t, i) => rectItem("tree", `🌳 Дерево ${i + 1}`, t));
+    L.benches.forEach((b, i) => rectItem("bench", `🪑 Скамья ${i + 1}`, b));
+    L.dropboxes.forEach((d, i) => rectItem("dropbox", `📮 Ящик ${i + 1}`, d));
+    L.cars.forEach((c, i) => rectItem("car", `🚗 Машина ${i + 1}`, c));
+    L.lamps.forEach((l, i) => {
+      out.push({
+        kind: "lamp",
+        label: `💡 Фонарь ${i + 1}`,
+        get: () => [l[0], l[1]],
+        set: (x, y) => { l[0] = x; l[1] = y; },
+        bounds: () => ({ x: l[0] - 40, y: l[1] - 100, w: 80, h: 100 }),
+      });
+    });
+    L.props.forEach((p, i) => {
+      out.push({
+        kind: "prop",
+        label: `📦 Проп ${i + 1}`,
+        get: () => [p[2], p[3]],
+        set: (x, y) => { p[2] = x; p[3] = y; },
+        bounds: () => ({ x: p[2] - 50, y: p[3] - 60, w: 100, h: 90 }),
+      });
+    });
+    out.push({
+      kind: "plaza", label: "⛲ Площадь",
+      get: () => [L.plaza[0], L.plaza[1]],
+      set: (x, y) => { L.plaza[0] = x; L.plaza[1] = y; },
+      bounds: () => ({ x: L.plaza[0], y: L.plaza[1], w: L.plaza[2], h: L.plaza[3] }),
+    });
+    out.push({
+      kind: "park", label: "🌳 Пустырь (парк)",
+      get: () => [L.park[0], L.park[1]],
+      set: (x, y) => { L.park[0] = x; L.park[1] = y; },
+      bounds: () => ({ x: L.park[0], y: L.park[1], w: L.park[2], h: L.park[3] }),
+    });
+    out.push({
+      kind: "district", label: "🏘 Жилой район",
+      get: () => [L.district[0], L.district[1]],
+      set: (x, y) => { L.district[0] = x; L.district[1] = y; },
+      bounds: () => ({ x: L.district[0], y: L.district[1], w: L.district[2], h: L.district[3] }),
+    });
+    L.roads.forEach((r, i) => {
+      out.push({
+        kind: "road", label: `🛣 Дорога ${i + 1}`,
+        get: () => [r[0], r[1]],
+        set: (x, y) => { r[0] = x; r[1] = y; },
+        bounds: () => ({ x: r[0], y: r[1], w: r[2], h: r[3] }),
+      });
+    });
+    for (const s of L.bus_stops) {
+      const meta = (this.city.bus_stops ?? []).find((x) => String(x.id) === String(s.id)) ?? {};
+      out.push({
+        kind: "bus_stop",
+        label: `🚌 ${meta.label ?? s.id}`,
+        get: () => [s.x, s.y],
+        set: (x, y) => { s.x = x; s.y = y; },
+        bounds: () => ({ x: s.x - 50, y: s.y - 60, w: 100, h: 90 }),
+      });
+    }
+    for (const nid of Object.keys(L.npc_spots ?? {})) {
+      const nm = this.game.npcById(nid);
+      out.push({
+        kind: "npc_spot",
+        label: `🧍 ${nm.name ?? nid}`,
+        get: () => L.npc_spots[nid],
+        set: (x, y) => { L.npc_spots[nid] = [x, y]; },
+        bounds: () => ({ x: L.npc_spots[nid][0] - 40, y: L.npc_spots[nid][1] - 60, w: 80, h: 90 }),
+      });
+    }
+    return out;
   }
 
   defaultSpawnCity() {
@@ -388,13 +565,6 @@ export class World {
     this.ylist.push({ y: y - 80, draw: (ctx) => Tex.drawMosaic(ctx, col, 10, 1, 2, x, y - 80, 5.0) });
   }
 
-  _lampsRow(x, y, n, step) {
-    for (let i = 0; i < n; i += 1) {
-      const lx = x + i * step, ly = y - 40;
-      this.ylist.push({ y: ly, draw: (ctx) => Tex.drawMosaic(ctx, 19, 13, 1, 1, lx, ly, 4.0) });
-    }
-  }
-
   _car(x, y, v) {
     const cells = [[31, 18], [33, 18], [31, 22], [33, 22]];
     const c = cells[v % cells.length];
@@ -402,8 +572,14 @@ export class World {
   }
 
   _bench(x, y) {
-    // деревянная скамья/стол (рейки (35,23) выглядели как странные металлические балки)
-    this.ylist.push({ y, draw: (ctx) => Tex.drawMosaic(ctx, 18, 15, 1, 1, x, y, 4.0) });
+    // цельная скамья: правая половина атласа + зеркальная левая
+    this.ylist.push({ y, draw: (ctx) => Tex.drawBench(ctx, x, y, 64) });
+  }
+
+  // Один фонарь (раньше рисовались рядами и не редактировались по одному).
+  _lamp(x, y) {
+    const ly = y - 40;
+    this.ylist.push({ y: ly, draw: (ctx) => Tex.drawMosaic(ctx, 19, 13, 1, 1, x, ly, 4.0) });
   }
 
   _propMc(col, row, x, y, sc) {
@@ -472,7 +648,7 @@ export class World {
   }
 
   _spawnNpcsCity() {
-    const spots = this.city.npc_spots ?? {};
+    const spots = this.layout?.npc_spots ?? this.city.npc_spots ?? {};
     for (const n of this.game.D.npcs?.npcs ?? []) {
       const post = this.game.npcWhere(String(n.id));
       if (!post.loc) continue;
@@ -485,7 +661,7 @@ export class World {
   }
 
   _spawnAmbient() {
-    for (const rule of this.city.ambient ?? []) {
+    for (const rule of this.layout?.ambient ?? this.city.ambient ?? []) {
       if (this.game.day < (rule.day_min ?? 1)) continue;
       if (rule.day_max && this.game.day > rule.day_max) continue;
       const count = rule.count ?? 1;
@@ -797,6 +973,18 @@ export class World {
   update(dt) {
     this.view.w = this.viewW();
     this.view.h = this.viewH();
+    if (this.editorActive) {
+      // Редактор: игрок заморожен, WASD — панорама камеры, время стоит.
+      let dx = 0, dy = 0;
+      if (this.keys.has("move_left")) dx -= 1;
+      if (this.keys.has("move_right")) dx += 1;
+      if (this.keys.has("move_up")) dy -= 1;
+      if (this.keys.has("move_down")) dy += 1;
+      this.cam.x += dx * 900 * dt;
+      this.cam.y += dy * 900 * dt;
+      this.ui.setPrompt("");
+      return;
+    }
     this._physics(dt);
     this._processTime(dt);
     this.findTarget();
@@ -846,15 +1034,20 @@ export class World {
     this.ylist.pop(); // убрать временный элемент игрока
 
     // тинт времени (world_base._update_tint)
-    const h = this.game.minutes / 60;
-    let c2 = null;
-    if (h < 10.0) c2 = "rgba(255,242,217,0.06)";
-    else if (h >= 16.0 && h < 18.0) c2 = "rgba(255,204,140,0.10)";
-    else if (h >= 18.0) c2 = "rgba(217,153,191,0.16)";
-    if (c2) {
-      ctx.fillStyle = c2;
-      ctx.fillRect(camX, camY, vw, vh);
+    if (!this.editorActive) {
+      const h = this.game.minutes / 60;
+      let c2 = null;
+      if (h < 10.0) c2 = "rgba(255,242,217,0.06)";
+      else if (h >= 16.0 && h < 18.0) c2 = "rgba(255,204,140,0.10)";
+      else if (h >= 18.0) c2 = "rgba(217,153,191,0.16)";
+      if (c2) {
+        ctx.fillStyle = c2;
+        ctx.fillRect(camX, camY, vw, vh);
+      }
     }
     ctx.restore();
+
+    // оверлей редактора (подписи объектов, выделение)
+    if (this.editorActive && this.editor) this.editor.drawOverlay(ctx, camX, camY);
   }
 }

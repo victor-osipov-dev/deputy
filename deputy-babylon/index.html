@@ -31,6 +31,22 @@
     <div id="stick-knob"></div>
   </div>
 
+  <!-- Редактор карты -->
+  <div id="editor" class="hidden">
+    <div class="ed-head">
+      <span>🗺 Редактор карты</span>
+      <button id="ed-close" title="Закрыть (F2)">✕</button>
+    </div>
+    <div class="ed-actions">
+      <button id="ed-save">💾 Сохранить в файл</button>
+      <button id="ed-download">⬇ Скачать JSON</button>
+      <button id="ed-reset">↺ Сброс</button>
+    </div>
+    <div id="ed-list" class="ed-list"></div>
+    <div id="ed-status" class="ed-status"></div>
+  </div>
+  <div id="ed-tip" class="hidden"></div>
+
   <!-- Модальные окна -->
   <div id="modal-root"></div>
 </div>

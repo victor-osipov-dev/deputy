@@ -3,6 +3,7 @@
 import { GameState } from "./game_state.js";
 import { World } from "./world.js";
 import { UI } from "./ui.js";
+import { Editor } from "./editor.js";
 import { loadAtlas, clearTexCache } from "./tex.js";
 
 const DATA_FILES = ["locations", "topics", "infos", "npcs", "dialogues", "promises", "travel", "events", "newspaper", "city", "interiors"];
@@ -18,9 +19,16 @@ window.addEventListener("unhandledrejection", (e) => {
 async function loadData() {
   const D = {};
   await Promise.all(DATA_FILES.map(async (f) => {
-    const r = await fetch(`data/${f}.json`);
+    const r = await fetch(`data/${f}.json`, { cache: "no-store" });
     D[f] = r.ok ? await r.json() : {};
   }));
+  // Раскладка карты из редактора (если сохраняли)
+  try {
+    const r = await fetch("data/city_layout.json", { cache: "no-store" });
+    if (r.ok) D.city_layout = await r.json();
+  } catch {
+    // файла ещё нет — не страшно
+  }
   return D;
 }
 
@@ -114,6 +122,10 @@ async function main() {
   }
   if (qmap && qmap !== "city") world.buildInterior(qmap);
   else world.buildCity();
+
+  // Редактор карты (после постройки карты): F2 или ?edit=1
+  const editor = new Editor(world);
+  if (qs.get("edit") === "1") editor.setActive(true);
 
   // Подсказка при входе (world_base._intro_hints).
   if (game.seenHint("move")) {

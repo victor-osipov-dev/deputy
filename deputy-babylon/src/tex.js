@@ -113,6 +113,28 @@ export function personIndex(npcId) {
 
 const _people = [];
 
+// Один тайл атласа в точку (x, y), size — размер на экране; flipX — зеркально по X.
+export function drawTileAt(ctx, col, row, x, y, size, flipX = false) {
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  if (flipX) {
+    ctx.translate(x + size, y);
+    ctx.scale(-1, 1);
+    ctx.drawImage(atlasCv, col * MC_PITCH, row * MC_PITCH, 16, 16, 0, 0, size, size);
+  } else {
+    ctx.drawImage(atlasCv, col * MC_PITCH, row * MC_PITCH, 16, 16, x, y, size, size);
+  }
+  ctx.restore();
+}
+
+// Скамья: правая половина из атласа + её зеркальная копия слева (цельная скамья).
+export function drawBench(ctx, cx, cy, size = 64) {
+  const x0 = cx - size; // левая половина начинается на size левее центра
+  const y0 = cy - size / 2;
+  drawTileAt(ctx, 18, 15, x0 + size, y0, size, false); // правая
+  drawTileAt(ctx, 18, 15, x0, y0, size, true);         // левая (зеркало)
+}
+
 // Спрайт-канва пешехода 16x24 по индексу (порт _build_people/_one_person).
 export function personTex(i) {
   if (_people.length === 0) buildPeople();
